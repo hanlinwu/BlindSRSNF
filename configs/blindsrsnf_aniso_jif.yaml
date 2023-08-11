@@ -1,0 +1,95 @@
+#################################
+##  Configs for the Trainer    ##
+#################################
+trainer:
+  pretrain_epochs: 0
+  max_epochs: 400
+  save_top_k: 2
+  save_period: 100
+  check_val_every_n_epoch: 1
+
+#################################
+##  Configs for the DataModule ##
+#################################
+data_module:
+  name: BlindSRJIFDataModule
+  args:
+    num_workers: 4
+    rgb_range: 1
+    scale: 4
+    train:
+      data_path: load/WorldStrat_png/train/HR
+      data_length: 8000
+      data_cache: memory
+      hr_img_sz: 256
+      batch_size: 8
+    valid:
+      lr_path: load/WorldStrat_png/test/LR
+      hr_path: load/WorldStrat_png/test/HR
+      data_first_k: 1
+      
+#######################################
+##  Configs for the LightningModule  ##
+#######################################
+lit_model:
+  name: DiffBlindSR3AtomJIFModel
+  args:
+    scale: 4
+    mean: [0.5, 0.5, 0.5]
+    std: [0.5, 0.5, 0.5]
+    # degradation settings
+    blur_kernel: 21
+    blur_type: 'aniso_gaussian' # aniso_gaussian
+    sig_min: 0.2
+    sig_max: 4.0
+    lambda_min: 0.2
+    lambda_max: 4.0
+    theta: 0.0
+    noise: 25.0
+    ###
+    dg_encoder: DegradationEncoder
+    contrast_loss_weight: 0.05
+    ema: true
+    ema_rate: 0.999
+    encoder:
+      name: RRDBNet
+      args: 
+        scale: 4
+        num_in_ch: 3
+        num_out_ch: 3
+        num_feat: 64
+        num_block: 23
+      is_train: true
+    diffusion_model:
+      name: DiffUNetSR3Atom
+      args:
+        in_channel: 3
+        out_channel: 3
+        inner_channel: 64
+        channel_mults: [1, 2, 2, 2]
+        res_blocks: 2
+        attn_strides: [16] # 16 == None
+        dropout: 0
+        fold: 2
+    diffusion:
+      beta_type: cosine
+      beta_start: 0.0001
+      beta_end: 0.02
+      n_timestep: 1000
+      model_var_type: fixedlarge
+      model_mean_type: xstart
+      t_encode_mode: continuous
+    valid:
+      skip: 50
+      eta: 0
+      scale: 4
+      no_crop_border: false
+      test_Y: false
+      blur_type: 'iso_gaussian' # 
+      blur_kernel: 21
+      sig: 1.2
+      noise: 0.0
+    optimizer:
+      lr: 0.0001
+      lr_scheduler_milestones: [200, 400, 600, 800]
+      lr_scheduler_gamma: 0.5

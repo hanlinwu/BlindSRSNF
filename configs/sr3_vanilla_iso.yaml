@@ -1,0 +1,83 @@
+#################################
+##  Configs for the Trainer    ##
+#################################
+trainer:
+  max_epochs: 1000
+  save_top_k: 2
+  save_period: 100
+  check_val_every_n_epoch: 10
+
+#################################
+##  Configs for the DataModule ##
+#################################
+data_module:
+  name: BlindSRDataModule
+  args:
+    num_workers: 4
+    rgb_range: 1
+    scale: 4
+    train:
+      data_path: load/SalCSSR-339/HR
+      data_length: 4000
+      data_cache: memory
+      hr_img_sz: 256
+      batch_size: 4
+    valid:
+      data_path: load/benchmark/sr-geo-15/HR
+      data_first_k: 1
+      
+#######################################
+##  Configs for the LightningModule  ##
+#######################################
+# use Settings from https://github.com/Janspiry/Image-Super-Resolution-via-Iterative-Refinement/blob/master/config/sr_sr3_16_128.json
+lit_model:
+  name: SR3VanillaModel
+  args:
+    scale: 4
+    mean: [0.5, 0.5, 0.5]
+    std: [0.5, 0.5, 0.5]
+    # degradation settings
+    blur_kernel: 21
+    blur_type: 'iso_gaussian'
+    sig_min: 0.2
+    sig_max: 4.0
+    lambda_min: 0.2
+    lambda_max: 4.0
+    theta: 0.0
+    noise: 0.0
+    ###
+    unet:
+      in_channel: 6 # input + condition channel
+      out_channel: 3
+      norm_groups: 32
+      inner_channel: 64
+      channel_multiplier: [1,2,4,8,8]
+      attn_res: [16]
+      res_blocks: 2
+      dropout: 0.2
+
+    beta_schedule:
+      schedule: linear
+      n_timestep: 2000
+      linear_start: 0.000001  #1e-6
+      linear_end: 0.01 # 1e-2
+
+    diffusion:
+      image_size: 512
+      channels: 3
+      conditional: true
+      loss_type: l1
+
+    valid:
+      scale: 4
+      no_crop_border: false
+      test_Y: false
+      blur_type: 'iso_gaussian' # aniso_gaussian
+      blur_kernel: 21
+      sig: 1.2
+      noise: 0.0
+
+    optimizer:
+      lr: 0.0001
+      lr_scheduler_milestones: [200, 400, 600, 800]
+      lr_scheduler_gamma: 0.5
